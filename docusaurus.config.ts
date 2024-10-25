@@ -1,6 +1,6 @@
 import { lightCodeTheme, darkCodeTheme } from 'prism-react-renderer';
 
-const organizationName = 'docs';
+const organizationName = 'mugen-docs';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -14,7 +14,7 @@ const config = {
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: `/${organizationName}/`,
 
-  projectName: '2024-2A-T02-EC11-G01',
+  projectName: 'docs',
   organizationName: organizationName,
   trailingSlash: false,
 
