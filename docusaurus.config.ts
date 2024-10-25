@@ -1,6 +1,6 @@
 import { lightCodeTheme, darkCodeTheme } from 'prism-react-renderer';
 
-const organizationName = 'mugen-docs';
+const organizationName = 'docs';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
