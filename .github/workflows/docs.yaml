@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: 18
 
+      - name: Clone submodules
+        run: git submodule init
       - name: Install dependencies
         run: npm ci
       - name: Build website
