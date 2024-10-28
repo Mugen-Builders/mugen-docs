@@ -5,7 +5,7 @@
  */
 
  :root {
-  --ifm-color-primary: #00FFD1; /* Cyan */
+  --ifm-color-primary: #008DA5; /* Cyan */
   --ifm-color-primary-dark: #FF007C; /* Magenta */
   --ifm-color-primary-darker: #FF00A5; /* Deep Magenta */
   --ifm-color-primary-darkest: #FF007C; /* Dark Magenta */
@@ -14,7 +14,21 @@
   --ifm-color-primary-lightest: #FF9CE8; /* Light Pink/Orange */
   --ifm-font-weight-semibold: 600;
   --ifm-code-font-size: 95%;
-  --ifm-background-color: #1A1A2E; /* Dark background */
+  --ifm-background-color: #ffffff; /* Dark background */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 255, 209, 0.1); /* Slight Cyan glow */
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #00F6FF; /* Cyan */
+  --ifm-color-primary-dark: #FF007C; /* Magenta */
+  --ifm-color-primary-darker: #FF00A5; /* Deep Magenta */
+  --ifm-color-primary-darkest: #FF007C; /* Dark Magenta */
+  --ifm-color-primary-light: #FF7CF0; /* Light Pink */
+  --ifm-color-primary-lighter: #FFD400; /* Yellow/Orange */
+  --ifm-color-primary-lightest: #FF9CE8; /* Light Pink/Orange */
+  --ifm-font-weight-semibold: 600;
+  --ifm-code-font-size: 95%;
+  --ifm-background-color: #ffffff; /* Dark background */
   --docusaurus-highlighted-code-line-bg: rgba(0, 255, 209, 0.1); /* Slight Cyan glow */
 }
 

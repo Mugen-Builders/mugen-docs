@@ -35,10 +35,8 @@ const sidebars: SidebarsConfig = {
           ],
         },
         'cartesi-avail-tutorial/troubleshooting',
-
-      ]
-    },
-    
+      ],
+    }
   ],
    
 };

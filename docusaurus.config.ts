@@ -26,8 +26,8 @@ const config = {
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'br',
-    locales: ['br'],
+    defaultLocale: 'en',
+    locales: ['en'],
   },
 
   presets: [
@@ -52,8 +52,8 @@ const config = {
   ({
     colorMode: {
       defaultMode: 'dark',
-      disableSwitch: true,
-      respectPrefersColorScheme: false,
+      disableSwitch: false,
+      respectPrefersColorScheme: true,
     },
     navbar: {
       title: 'Mugen Builders | Docs',
