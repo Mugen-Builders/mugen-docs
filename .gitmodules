@@ -1,3 +1,6 @@
 [submodule "docs/cartesi-avail-tutorial"]
     path = docs/cartesi-avail-tutorial
     url = https://github.com/Mugen-Builders/cartesi-avail-tutorial.git
+[submodule "docs/cartesi-espresso-tutorial"]
+	path = docs/cartesi-espresso-tutorial
+	url = https://github.com/Mugen-Builders/cartesi-espresso-tutorial
