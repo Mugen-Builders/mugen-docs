@@ -36,6 +36,26 @@ const sidebars: SidebarsConfig = {
         },
         'cartesi-avail-tutorial/troubleshooting',
       ],
+    },
+    {
+      type: 'category',
+      label: 'Espresso Integration',
+      items: [
+        'cartesi-espresso-tutorial/introduction',
+        'cartesi-espresso-tutorial/architecture',
+        'cartesi-espresso-tutorial/installation',
+        'cartesi-espresso-tutorial/building',
+        'cartesi-espresso-tutorial/testnet',
+        {
+          type: 'category',
+          label: 'Interacting with your dApp',
+          items: [
+            'cartesi-espresso-tutorial/interacting',
+            'cartesi-espresso-tutorial/outputs',
+          ],
+        },
+        'cartesi-espresso-tutorial/troubleshooting',
+      ],
     }
   ],
    
