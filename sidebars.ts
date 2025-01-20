@@ -56,6 +56,25 @@ const sidebars: SidebarsConfig = {
         },
         'cartesi-espresso-tutorial/troubleshooting',
       ],
+    },
+    {
+      type: 'category',
+      label: 'Coprocessor',
+      items: [
+        'cartesi-co-processor-tutorial/introduction',
+        'cartesi-co-processor-tutorial/architecture',
+        'cartesi-co-processor-tutorial/installation',
+        'cartesi-co-processor-tutorial/building',
+        'cartesi-co-processor-tutorial/running',
+        {
+          type: 'category',
+          label: 'Interacting with your dApp',
+          items: [
+            'cartesi-co-processor-tutorial/interacting',
+          ],
+        },
+        'cartesi-co-processor-tutorial/troubleshooting',
+      ],
     }
   ],
    
