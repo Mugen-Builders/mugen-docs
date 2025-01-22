@@ -60,3 +60,7 @@ li > a.menu__link {
     display: none;
   }
 }
+
+.container {
+  padding: 50px;
+}

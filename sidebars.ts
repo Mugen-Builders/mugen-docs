@@ -66,11 +66,17 @@ const sidebars: SidebarsConfig = {
         'cartesi-co-processor-tutorial/installation',
         'cartesi-co-processor-tutorial/building',
         'cartesi-co-processor-tutorial/running',
+        'cartesi-co-processor-tutorial/interacting',
+        'cartesi-co-processor-tutorial/deploy',
         {
           type: 'category',
-          label: 'Interacting with your dApp',
+          label: 'Manual Approach',
           items: [
-            'cartesi-co-processor-tutorial/interacting',
+            'cartesi-co-processor-tutorial/manually/building',
+            'cartesi-co-processor-tutorial/manually/running',
+            'cartesi-co-processor-tutorial/manually/deploy',
+
+
           ],
         },
         'cartesi-co-processor-tutorial/troubleshooting',
