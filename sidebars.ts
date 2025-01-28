@@ -59,7 +59,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Coprocessor',
+      label: 'Cartesi Coprocessor',
       items: [
         'cartesi-co-processor-tutorial/introduction',
         'cartesi-co-processor-tutorial/architecture',
