@@ -66,6 +66,7 @@ const sidebars: SidebarsConfig = {
         'cartesi-co-processor-tutorial/installation',
         'cartesi-co-processor-tutorial/building',
         'cartesi-co-processor-tutorial/running',
+        'cartesi-co-processor-tutorial/nonodox',
         'cartesi-co-processor-tutorial/interacting',
         'cartesi-co-processor-tutorial/deploy',
         {
@@ -75,8 +76,6 @@ const sidebars: SidebarsConfig = {
             'cartesi-co-processor-tutorial/manually/building',
             'cartesi-co-processor-tutorial/manually/running',
             'cartesi-co-processor-tutorial/manually/deploy',
-
-
           ],
         },
         'cartesi-co-processor-tutorial/troubleshooting',
