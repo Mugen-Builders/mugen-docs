@@ -78,6 +78,7 @@ const sidebars: SidebarsConfig = {
             'cartesi-co-processor-tutorial/manually/deploy',
           ],
         },
+        'cartesi-co-processor-tutorial/limitations',
         'cartesi-co-processor-tutorial/troubleshooting',
       ],
     }
