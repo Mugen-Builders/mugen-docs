@@ -60,6 +60,7 @@ const sidebars: SidebarsConfig = {
             'cartesi-espresso-tutorial/outputs',
           ],
         },
+        'cartesi-espresso-tutorial/deployment',
         'cartesi-espresso-tutorial/troubleshooting',
       ],
     },
