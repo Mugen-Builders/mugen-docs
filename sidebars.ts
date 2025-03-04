@@ -101,7 +101,14 @@ const sidebars: SidebarsConfig = {
         'cartesi-co-processor-tutorial/limitations',
         'cartesi-co-processor-tutorial/troubleshooting',
       ],
-    }
+    },
+    {
+      type: 'category',
+      label: 'RiscZero Integration',
+      items: [
+        'cartesi-risczero-tutorial/introduction',
+      ],
+    },
   ],
    
 };
