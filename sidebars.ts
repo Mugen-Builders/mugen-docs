@@ -107,6 +107,16 @@ const sidebars: SidebarsConfig = {
       label: 'RiscZero Integration',
       items: [
         'cartesi-risczero-tutorial/introduction',
+        'cartesi-risczero-tutorial/architecture',
+        'cartesi-risczero-tutorial/installation',
+        {
+          type: 'category',
+          label: 'Development',
+          items: [
+            'cartesi-risczero-tutorial/development/generate-a-zk-proof',
+            'cartesi-risczero-tutorial/development/verify-a-zk-proof',
+          ],
+        },
       ],
     },
   ],
