@@ -9,7 +9,7 @@ Install Rust and Cargo using the official [Rust installation guide](https://www.
 Install [Cross](https://github.com/cross-rs/cross) for multi-platform builds, especially if you want to build for the Cartesi Machine(RISC-V) with ease.
 
 ```bash
-cargo install cross
+cargo install cross --git https://github.com/cross-rs/cross
 ```
 
 :::note
