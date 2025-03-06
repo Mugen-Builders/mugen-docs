@@ -33,51 +33,62 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 bincode = "1.3"
+base64 = "0.21"
 risc0-zkvm = { version = "1.2.1", default-features = false } # Disable default features for WASM
 ```
 
 ## 3. Write the Verifier Code
 
-The verifier needs to read and validate our proof files. Create this code in `verifier/src/main.rs`:
+The verifier needs to read and validate our proof file. Create this code in `verifier/src/main.rs`:
 
 ```rust
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use bincode::deserialize;
 use risc0_zkvm::Receipt;
+use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
-use bincode::deserialize;
+
+#[derive(Deserialize)]
+struct ProofData {
+    receipt: String,
+    image_id: String,
+}
 
 fn main() {
-    // Read proof and image ID from mounted input
-    let mut receipt_file = File::open("/mnt/input/receipt.bin")
-        .expect("Failed to open receipt file");
-    let mut receipt_data = Vec::new();
-    receipt_file.read_to_end(&mut receipt_data)
-        .expect("Failed to read receipt data");
+    // Read the JSON proof file
+    let mut proof_file =
+        File::open("/mnt/input/proof.json").expect("Failed to open proof.json file");
+    let mut proof_contents = String::new();
+    proof_file
+        .read_to_string(&mut proof_contents)
+        .expect("Failed to read proof.json");
 
-    let receipt: Receipt = deserialize(&receipt_data)
-        .expect("Failed to deserialize receipt");
+    // Parse the JSON data
+    let proof_data: ProofData =
+        serde_json::from_str(&proof_contents).expect("Failed to parse proof JSON");
 
-    let mut id_file = File::open("/mnt/input/multiply_id.bin")
-        .expect("Failed to open image ID file");
-    let mut id_data = Vec::new();
-    id_file.read_to_end(&mut id_data)
-        .expect("Failed to read image ID data");
+    // Decode the base64 receipt
+    let receipt_data = BASE64
+        .decode(proof_data.receipt)
+        .expect("Failed to decode receipt base64");
+    let receipt: Receipt = deserialize(&receipt_data).expect("Failed to deserialize receipt");
 
-    let image_id: [u8; 32] = id_data.try_into()
-        .expect("Image ID has incorrect length");
+    // Decode the base64 image ID
+    let id_data = BASE64
+        .decode(proof_data.image_id)
+        .expect("Failed to decode image ID base64");
+    let image_id: [u8; 32] = id_data.try_into().expect("Image ID has incorrect length");
 
+    // Verify the proof
     match receipt.verify(image_id) {
         Ok(_) => println!("Hi buddy! Proof verification inside the Cartesi Machine was successful! The receipt is valid!"),
         Err(e) => println!("Proof verification failed: {:?}", e)
     }
 }
 ```
-
-This code expects to find two crucial files in `/mnt/input`:
-
-- `receipt.bin`: The ZK proof we generated
-- `multiply_id.bin`: The program's image ID
 
 ## 4. Cross-Compile for Cartesi
 
@@ -101,19 +112,18 @@ Since Cartesi Machine uses RISC-V architecture, we need to cross-compile our ver
   cp target/riscv64gc-unknown-linux-gnu/release/verifier ../drives/input/
   ```
 
-## 5. Prepare Input Files
+## 5. Prepare Input File
 
 :::note
-You must copy both the receipt and the image ID files from when you generated the proof.
+You must copy the proof.json file from when you generated the proof.
 :::
 
 ```bash
-# Copy the proof files from your previous RISC Zero project
-cp ../path/to/previous/receipt.bin ../drives/input/receipt.bin
-cp ../path/to/previous/multiply_id.bin ../drives/input/multiply_id.bin
+# Copy the proof file from your previous RISC Zero project
+cp ../path/to/previous/proof.json ../drives/input/proof.json
 ```
 
-These files are essential - they contain the actual proof (`receipt.bin`) and the program identifier (`multiply_id.bin`) from our previous step. Without these files, the verification will fail!
+This file is essential - it contains both the proof and program identifier from our previous step. Without this file, the verification will fail!
 
 ## 6. Create ext2 Filesystem Image
 
@@ -146,8 +156,7 @@ cartesi-verifier/
 ├── drives/
 │   ├── input/
 │   │   ├── verifier           # The cross-compiled RISC-V binary
-│   │   ├── receipt.bin        # The ZK proof from previous step
-│   │   └── multiply_id.bin    # The image ID from previous step
+│   │   └── proof.json         # The proof data from previous step
 │   └── input.ext2             # Generated filesystem image
 ├── verifier/
 │   ├── src/
@@ -210,7 +219,8 @@ This means your zero-knowledge proof has been successfully verified inside the C
 
 ## Troubleshooting
 
-- **"Failed to open receipt file"**: Double-check that you copied both `receipt.bin` and `multiply_id.bin` from your previous step to `drives/input/`.
+- **"Failed to open proof.json file"**: Double-check that you copied `proof.json` from your previous step to `drives/input/`.
+- **"Failed to parse proof JSON"**: Ensure the JSON file is properly formatted and contains both receipt and image_id fields.
 - **Permission Issues**: Run `chmod +x drives/input/verifier` before creating the ext2 image.
 - **Ext2 Image Errors**: Use `genext2fs -D` for detailed debugging information.
-- **Verification Fails**: Ensure you're using the correct `multiply_id.bin` that matches your proof - mixing files from different programs won't work!
+- **Verification Fails**: Ensure you're using the correct `proof.json` that matches your program - mixing files from different programs won't work!
