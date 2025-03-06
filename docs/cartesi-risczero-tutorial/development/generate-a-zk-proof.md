@@ -125,7 +125,7 @@ RISC0_DEV_MODE=0 cargo run --release
 
 This command runs the computation and generates a proof (receipt) that the computation was performed correctly.
 
-## Understanding the Output
+## Understanding the output
 
 When generating a proof using RiscZero, we save a single JSON file that will be used by the Cartesi Machine:
 

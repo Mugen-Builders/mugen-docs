@@ -90,7 +90,7 @@ fn main() {
 }
 ```
 
-## 4. Cross-Compile for Cartesi
+## 4. Cross-Compile for the Cartesi Machine
 
 Since Cartesi Machine uses RISC-V architecture, we need to cross-compile our verifier:
 
