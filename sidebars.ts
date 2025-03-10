@@ -44,8 +44,14 @@ const sidebars: SidebarsConfig = {
         'cartesi-espresso-tutorial/introduction',
         'cartesi-espresso-tutorial/architecture',
         'cartesi-espresso-tutorial/installation',
-        'cartesi-espresso-tutorial/building',
-        'cartesi-espresso-tutorial/testnet',
+        {
+          type: 'category',
+          label: 'Development',
+          items: [
+            'cartesi-espresso-tutorial/building',
+            'cartesi-espresso-tutorial/testnet',
+          ],
+        },
         {
           type: 'category',
           label: 'Interacting with your dApp',
@@ -54,6 +60,8 @@ const sidebars: SidebarsConfig = {
             'cartesi-espresso-tutorial/outputs',
           ],
         },
+        'cartesi-espresso-tutorial/deployment',
+        'cartesi-espresso-tutorial/limitations',
         'cartesi-espresso-tutorial/troubleshooting',
       ],
     },
