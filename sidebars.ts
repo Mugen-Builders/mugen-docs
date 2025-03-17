@@ -114,7 +114,7 @@ const sidebars: SidebarsConfig = {
           label: 'Development',
           items: [
             'cartesi-risczero-tutorial/development/generate-a-zk-proof',
-            'cartesi-risczero-tutorial/development/verify-a-zk-proof-in-cartesi-machine',
+            'cartesi-risczero-tutorial/development/verify-a-zk-proof-in-cartesi-rollups',
           ],
         },
       ],
