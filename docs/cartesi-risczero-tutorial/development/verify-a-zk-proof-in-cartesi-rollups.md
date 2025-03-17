@@ -1,21 +1,19 @@
-# Verifying a ZK Proof in Cartesi Rollups
+# Verify a ZK Proof in Cartesi Rollups
 
 This guide walks you through creating a Cartesi Rollups application that can verify RISC Zero zero-knowledge proofs. We'll build a complete application that receives ZK proofs as inputs and verifies them within the Cartesi Machine.
 
 ## Prerequisites
 
-- [Cartesi CLI](https://docs.cartesi.io/cartesi-cli/installation/) installed
+- [Cartesi CLI](https://docs.cartesi.io/cartesi-rollups/1.5/development/installation/) installed
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 - [Cast](https://book.getfoundry.sh/cast/) (part of Foundry) for sending transactions
-- [jq](https://jqlang.github.io/jq/download/) for JSON processing
 - Basic understanding of Rust and zero-knowledge proofs
 
 ## 1. Creating a Cartesi Rollups Project
 
-First, let's create a new Cartesi Rollups project using the Cartesi CLI:
+First, let's create a new Cartesi Rollups project with Rust template using the Cartesi CLI:
 
 ```bash
-# Create a new Cartesi project with Rust template
 cartesi create rollups-verifier --template rust
 cd rollups-verifier
 ```
@@ -57,8 +55,15 @@ use std::env;
 
 // This is the image ID of the RISC Zero program we want to verify
 // You should replace this with your own image ID
-const MULTIPLY_IMAGE_ID: [u32; 8] = [
-    0x4ffd3425, 0x62f33b22, 0x8013cd04, 0xce6caaaf, 0x3ff02ae1, 0x10931a5e, 0xdfcf5c2b, 0x95173a20,
+const PASSWORD_VERIFY_ID: [u32; 8] = [
+    0x3f3e555b,
+    0xe83abba8,
+    0x588f7354,
+    0x121fd345,
+    0x0934a8de,
+    0x232fa415,
+    0x8bab629b,
+    0xd4d52fba
 ];
 
 #[derive(Deserialize)]
@@ -89,7 +94,7 @@ async fn verify_zkp(payload: &str) -> Result<(), Box<dyn std::error::Error>> {
     let receipt: Receipt = bincode::deserialize(receipt_bytes)?;
 
     // Verify the receipt against the expected image ID
-    receipt.verify(MULTIPLY_IMAGE_ID)?;
+    receipt.verify(PASSWORD_VERIFY_ID)?;
 
     // Extract and log the result from the journal
     let result: u64 = receipt.journal.decode()?;
@@ -195,7 +200,6 @@ The `verify_zkp` function handles the core verification logic:
 Now that we have our code ready, let's build the Cartesi application:
 
 ```bash
-# Build the Cartesi application
 cartesi build
 ```
 
@@ -206,7 +210,6 @@ This command builds a Cartesi machine with our Rust application inside. The buil
 Once the build is complete, we can run our application:
 
 ```bash
-# Run the Cartesi application
 cartesi run
 ```
 
@@ -216,83 +219,26 @@ This starts a local Anvil node on port 8545 and deploys the necessary contracts 
 
 To send a ZK proof to our application, we'll create a script that prepares the proof data and sends it using Cast.
 
-Create a file named `send_proof.sh` with the following content:
+Create a file named `send_proof.sh` in the `password_proof`(proof generator directory) with the following content:
 
 ```bash
 #!/bin/bash
 
-# Store the cartesi address-book output in a variable for easier processing
-ADDRESS_BOOK=$(cartesi address-book)
-echo "Address Book Output:"
-echo "$ADDRESS_BOOK"
-echo "------------------------"
-
-# Extract addresses using precise grep patterns
-# For InputBox, match the exact name with word boundaries to avoid partial matches
-export INPUT_BOX_ADDRESS=$(echo "$ADDRESS_BOOK" | grep -w "InputBox" | awk '{print $2}')
-
-# For CartesiDApp, match the exact name with word boundaries, excluding CartesiDAppFactory
-export DAPP_ADDRESS=$(echo "$ADDRESS_BOOK" | grep -w "CartesiDApp" | grep -v "CartesiDAppFactory" | awk '{print $2}')
-
-# Verify that we found the addresses
-echo "Extracted addresses:"
-echo "Input Box Address: $INPUT_BOX_ADDRESS"
-echo "DApp Address: $DAPP_ADDRESS"
-
-# Check if addresses were found, if not try alternative patterns
-if [ -z "$INPUT_BOX_ADDRESS" ]; then
-    echo "InputBox address not found using exact match, trying alternative pattern..."
-    # Try a more flexible match if the exact match fails
-    export INPUT_BOX_ADDRESS=$(echo "$ADDRESS_BOOK" | grep "InputBox" | awk '{print $2}')
-    echo "Alternative InputBox Address: $INPUT_BOX_ADDRESS"
-fi
-
-if [ -z "$DAPP_ADDRESS" ]; then
-    echo "DApp address not found using exact match, trying alternative pattern..."
-    # Try a more flexible match if the exact match fails
-    export DAPP_ADDRESS=$(echo "$ADDRESS_BOOK" | grep "DApp" | grep -v "Factory" | head -1 | awk '{print $2}')
-    echo "Alternative DApp Address: $DAPP_ADDRESS"
-fi
-
+# Hardcoded addresses that we know work in Anvil
+export INPUT_BOX_ADDRESS="0x59b22D57D4f067708AB0c00552767405926dc768"
+export DAPP_ADDRESS="0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e"
 export MNEMONIC="test test test test test test test test test test test junk"
 
-# Read the JSON file and extract the combined input using jq
-if ! command -v jq &> /dev/null; then
-    echo "jq is not installed. Please install it using your package manager."
-    exit 1
-fi
-
-if [ ! -f proof_input.json ]; then
-    echo "proof_input.json not found. Please make sure the file exists."
-    exit 1
-fi
-
+# Extract proof input
 INPUT=$(cat proof_input.json | jq -r '.input')
 
-# Debug information
-echo "Input length: ${#INPUT} characters"
-if [ $((${#INPUT} % 2)) -eq 1 ]; then
-    echo "Error: Hex string has odd length. Each byte needs 2 characters."
+# Validate hex input
+if [ $((${#INPUT} % 2)) -eq 1 ] || ! [[ $INPUT =~ ^[0-9a-fA-F]+$ ]]; then
+    echo "Error: Invalid hex input"
     exit 1
 fi
 
-# Validate hex string (should only contain 0-9 and a-f)
-if ! [[ $INPUT =~ ^[0-9a-fA-F]+$ ]]; then
-    echo "Error: Input contains invalid hex characters"
-    exit 1
-fi
-
-# Final check to ensure we have valid addresses
-if [ -z "$INPUT_BOX_ADDRESS" ] || [ -z "$DAPP_ADDRESS" ]; then
-    echo "Error: Could not extract addresses from cartesi address-book output."
-    echo "Please check the output above and modify the script if needed."
-    exit 1
-fi
-
-echo "Input appears valid, sending transaction..."
-
-# Send the transaction using cast - note that we add 0x prefix ONLY for the cast command
-# The input itself should be raw hex without 0x
+# Send the transaction
 cast send $INPUT_BOX_ADDRESS "addInput(address,bytes)" $DAPP_ADDRESS "0x$INPUT" --mnemonic "$MNEMONIC"
 ```
 
@@ -302,9 +248,8 @@ Make the script executable:
 chmod +x send_proof.sh
 ```
 
-### Creating a Sample Proof Input
-
-Create a file named `proof_input.json` with your ZK proof data. The format should be:
+:::tip Proof Input
+The script `send_proof.sh` uses the `proof_input.json` created in the [previous step](./generate-a-zk-proof.md) with your ZK proof data. The format should be:
 
 ```json
 {
@@ -312,7 +257,7 @@ Create a file named `proof_input.json` with your ZK proof data. The format shoul
 }
 ```
 
-Replace `your_hex_encoded_proof_data_here` with the actual hex-encoded proof data from your RISC Zero application.
+:::
 
 ### Sending the Proof
 
@@ -327,68 +272,85 @@ Now you can send the proof to your Cartesi application:
 You can monitor the application's logs to see if the proof verification was successful:
 
 ```bash
-# In a separate terminal
-docker logs -f cartesi_rollups_verifier_dapp
+validator-1  | Received payload length: 785 bytes
+validator-1  | Receipt length: 753 bytes
+validator-1  | Image ID length: 32 bytes
+validator-1  | Verified journal data: 575525617765
+validator-1  | Proof verified successfully!
+validator-1  | Sending finish
 ```
 
 Look for messages like "Proof verified successfully!" or "Proof verification failed" in the logs.
-
-## 8. Troubleshooting
-
-### Contract Address Issues
-
-If you encounter issues with the script not finding the correct contract addresses, here are some tips:
-
-1. **Check the address-book format**: The script relies on the output format of `cartesi address-book`. Look at the output to see the exact names of the contracts:
-
-   ```bash
-   cartesi address-book | cat
-   ```
-
-2. **Examine the exact contract names**: The naming might vary between Cartesi versions. Some common variations:
-
-   - `InputBox` vs `Input Box`
-   - `CartesiDApp` vs `DApp` vs `Cartesi DApp`
-
-3. **Manual approach**: If automatic extraction fails, you can always manually get the addresses and modify the script:
-
-   ```bash
-   # Example of manually setting addresses after seeing the output
-   export INPUT_BOX_ADDRESS=0x59b22D57D4f067708AB0c00552767405926dc768
-   export DAPP_ADDRESS=0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e
-   ```
-
-### Proof Format Issues
-
-If your proof verification fails, check the following:
-
-1. **Image ID**: Ensure you're using the correct `MULTIPLY_IMAGE_ID` in your Rust code.
-2. **Proof format**: The script expects a specific format for the proof in the `proof_input.json` file.
-3. **Debug logs**: Check the Docker logs for detailed error messages:
-   ```bash
-   docker logs -f cartesi_rollups_verifier_dapp
-   ```
-
-## Understanding the Verification Process
-
-When a ZK proof is sent to the Cartesi Rollups application:
-
-1. The proof is received as an input through the InputBox contract
-2. The Cartesi node processes this input and passes it to our application
-3. Our application decodes and verifies the proof using the RISC Zero library
-4. The verification result is logged and the application returns "accept" or "reject"
-5. The Cartesi node processes this response and updates the state accordingly
 
 ## Customizing for Your Own Proofs
 
 To use this verifier with your own RISC Zero proofs:
 
-1. Replace the `MULTIPLY_IMAGE_ID` constant with your own image ID
+1. Replace the `PASSWORD_VERIFY_ID` constant with your own image ID
 2. Adjust the `verify_zkp` function if your proof format is different
 3. Modify the journal decoding if your proof outputs different data
 
-## Conclusion
+## Working with Journal Data
 
-You've now built a Cartesi Rollups application that can verify RISC Zero zero-knowledge proofs. This application demonstrates how to leverage the power of Cartesi Machines to perform complex verification tasks that would be prohibitively expensive on Ethereum directly.
+The journal data is the output of the RISC Zero program. It is the data that is verified by the verifier.
 
-By running the verification inside a Cartesi Machine, you get the security guarantees of Ethereum combined with the computational capabilities of a full Linux environment, allowing for more complex and efficient verification algorithms.
+The journal data is encoded in the receipt.
+
+The journal in a RISC Zero receipt contains the public outputs from the ZK proof execution. In our example, we're extracting a single `u64` value:
+
+```rust
+let result: u64 = receipt.journal.decode()?;
+println!("Verified journal data: {}", result);
+```
+
+You can extract more complex data types from the journal, depending on what your RISC Zero guest program outputs. Here are some examples:
+
+1. **Extract multiple values**:
+
+   ```rust
+   let (value1, value2, value3): (u64, String, bool) = receipt.journal.decode()?;
+   ```
+
+2. **Extract custom structs** (requires the struct to implement `Decode`):
+
+   ```rust
+   #[derive(Deserialize, Encode, Decode)]
+   struct MyJournalData {
+       user_id: String,
+       score: u64,
+       verified: bool,
+   }
+
+   let data: MyJournalData = receipt.journal.decode()?;
+   ```
+
+3. **Use journal data for additional computation**:
+
+   ```rust
+   let score: u64 = receipt.journal.decode()?;
+
+   // Perform additional computation with the verified data
+   let reward = calculate_reward(score);
+
+   // Store the result in application state
+   state.update_user_reward(user_id, reward);
+   ```
+
+4. **Create a notice with journal data**:
+
+   ```rust
+   let result: u64 = receipt.journal.decode()?;
+
+   // Create a notice with the verified result
+   let notice_payload = format!("{{\"verified_result\":{}}}", result);
+   let notice_request = hyper::Request::builder()
+       .method(hyper::Method::POST)
+       .header(hyper::header::CONTENT_TYPE, "application/json")
+       .uri(format!("{}/notice", server_addr))
+       .body(hyper::Body::from(notice_payload))?;
+
+   let notice_response = client.request(notice_request).await?;
+   println!("Notice status: {}", notice_response.status());
+   ```
+
+   By creating notices from the verified journal data, you make the ZK proof results available on-chain in a verifiable way.
