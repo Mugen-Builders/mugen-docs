@@ -104,7 +104,7 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'RiscZero Integration',
+      label: 'Risc Zero Integration',
       items: [
         'cartesi-risczero-tutorial/introduction',
         'cartesi-risczero-tutorial/architecture',
