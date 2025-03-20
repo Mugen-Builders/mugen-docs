@@ -115,6 +115,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'cartesi-risczero-tutorial/development/generate-a-zk-proof',
             'cartesi-risczero-tutorial/development/verify-a-zk-proof-in-cartesi-rollups',
+            'cartesi-risczero-tutorial/development/verify-a-zk-proof-with-coprocessor',
           ],
         },
       ],

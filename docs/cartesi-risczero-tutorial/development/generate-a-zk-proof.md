@@ -1,6 +1,6 @@
 # Generate a ZK Proof
 
-We'll create a program that proves ownership of a password hash without revealing the password. This example demonstrates a practical use case for zero-knowledge proofs in authentication systems.
+We'll create a program that allows users to prove they are above a certain age without revealing their actual birthdate. This is particularly useful for age-restricted services where privacy is important. The system uses RISC0 zkVM to generate zero-knowledge proofs that can be verified in the Cartesi Machine without exposing sensitive personal information.
 
 ## Creating the Project
 
@@ -18,8 +18,8 @@ First, [install the RISC Zero toolchain](https://dev.risczero.com/api/zkvm/insta
 3. Create a new project:
 
     ```bash
-    cargo risczero new password_proof --guest-name password_verify
-    cd password_proof
+    cargo risczero new generate_proof --guest-name age_verify
+    cd generate_proof
     ```
 
 This command scaffolds a new RISC Zero project with the basic structure and necessary dependencies.
@@ -29,7 +29,7 @@ This command scaffolds a new RISC Zero project with the basic structure and nece
 Create a new project with the following structure:
 
 ```
-password_proof/
+generate_proof/
 ├── Cargo.toml           # Workspace configuration
 ├── host/
 │   ├── Cargo.toml      # Host dependencies
@@ -73,20 +73,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-[package]
-name = "host"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
 methods = { path = "../methods" }
-risc0-zkvm = { version = "1.2.1" }
+risc0-zkvm = { version = "1.2.5" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = "1.0"
 serde_json = "1.0"
 hex = "0.4"
-sha2 = "0.10"
 bincode = "1.3"
+
 ```
 
 **3. Guest Cargo.toml**
@@ -95,15 +89,15 @@ The guest code runs inside the zkVM and needs minimal dependencies. We disable d
 
 ```toml
 [package]
-name = "password_verify"
+name = "age_verify"
 version = "0.1.0"
 edition = "2021"
 
 [workspace]
 
 [dependencies]
-risc0-zkvm = { version = "1.2.1", default-features = false, features = ['std'] }
-sha2 = "0.10"
+risc0-zkvm = { version = "1.2.5", default-features = false, features = ['std'] }
+
 ```
 
 ## Writing the Code
@@ -112,27 +106,64 @@ sha2 = "0.10"
 
 ```rust
 use risc0_zkvm::guest::env;
-use sha2::{Sha256, Digest};
+
+// Minimum age requirement (cannot be modified during runtime)
+const MINIMUM_AGE: u64 = 21;
+const SECONDS_IN_YEAR: u64 = 31_536_000; // 365 days
+const SECONDS_IN_DAY: u64 = 86_400;
 
 fn main() {
-    // Read the password from the host
-    let password: String = env::read();
+    // Read the birthdate timestamp from the host
+    let birthdate_timestamp: u64 = env::read();
 
-    // Read the expected hash from the host
-    let expected_hash: [u8; 32] = env::read();
+    // Read the current time from host (to prevent time manipulation)
+    let current_timestamp: u64 = env::read();
 
-    // Hash the password
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    let password_hash = hasher.finalize();
+    // Calculate approximate age in years
+    let age_in_seconds = current_timestamp.saturating_sub(birthdate_timestamp);
+    let mut age = age_in_seconds / SECONDS_IN_YEAR;
 
-    // Verify the hash matches
-    assert_eq!(password_hash[..], expected_hash, "Password hash mismatch!");
+    // Account for leap years more precisely by checking day of year
+    let birthdate_day_of_year = day_of_year(birthdate_timestamp);
+    let current_day_of_year = day_of_year(current_timestamp);
 
-    // Commit the hash to the journal (public output)
-    // The original password remains private
-    env::commit(&expected_hash);
+    // If we haven't reached the birthday day this year, subtract 1 from age
+    if current_day_of_year < birthdate_day_of_year {
+        age = age.saturating_sub(1);
+    }
+
+    // Verify age requirement
+    assert!(age >= MINIMUM_AGE, "Age verification failed: Too young!");
+
+    // Commit only the verification result, not the actual age
+    let verification_result = true;
+    env::commit(&verification_result);
 }
+
+// Helper function to calculate day of year (1-366)
+fn day_of_year(timestamp: u64) -> u64 {
+    // Get days since epoch
+    let days_since_epoch = timestamp / SECONDS_IN_DAY;
+
+    // Calculate year (approximate)
+    let year = 1970 + (days_since_epoch / 365);
+
+    // Calculate start of year timestamp
+    let mut year_start = 0;
+    for y in 1970..year {
+        year_start += if is_leap_year(y) { 366 } else { 365 };
+    }
+    year_start *= SECONDS_IN_DAY;
+
+    // Calculate day of year
+    ((timestamp - year_start) / SECONDS_IN_DAY) + 1
+}
+
+// Helper function to check if a year is a leap year
+fn is_leap_year(year: u64) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
 ```
 
 **2. Host Program (`host/src/main.rs`)**
@@ -142,13 +173,11 @@ By default, we use the standard composite receipt type which is suitable for mos
 ```rust
 // These constants represent the RISC-V ELF and the image ID generated by risc0-build.
 // The ELF is used for proving and the ID is used for verification.
-use methods::{
-    PASSWORD_VERIFY_ELF, PASSWORD_VERIFY_ID
-};
-use serde::Serialize;
+use methods::{AGE_VERIFY_ELF, AGE_VERIFY_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
-use sha2::{Sha256, Digest};
+use serde::Serialize;
 use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 struct ProofData {
@@ -156,82 +185,99 @@ struct ProofData {
 }
 
 fn main() {
-    // Initialize tracing. In order to view logs, run `RUST_LOG=info cargo run`
+    // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
-        let password = "my_secret_password";
+    // Example birthdate: January 1, 2000 (timestamp in seconds)
+    let birthdate_timestamp = 946684800u64; // 2000-01-01T00:00:00Z
 
-        // Calculate the password hash
-        let mut hasher = Sha256::new();
-        hasher.update(password.as_bytes());
-        let password_hash: [u8; 32] = hasher.finalize().try_into().unwrap();
-    
-        // Create the execution environment
-        let env = ExecutorEnv::builder()
-            .write(&password.to_string())
-            .unwrap()
-            .write(&password_hash)
-            .unwrap()
-            .build()
-            .unwrap();
-    
-        // Get the prover
-        let prover = default_prover();
-    
-        // Generate proof (uses composite receipt by default)
-        println!("Generating proof...");
-  
-    
-        let receipt = prover
-            .prove(env, PASSWORD_VERIFY_ELF)
-            .unwrap()
-            .receipt;
-        
-    
-        // Prepare proof data for Cartesi
-        let receipt_bytes = bincode::serialize(&receipt).unwrap();
-        let image_id_bytes: Vec<u8> = PASSWORD_VERIFY_ID
-            .iter()
-            .flat_map(|&id| id.to_le_bytes().to_vec())
-            .collect();
-    
-        // Combine receipt and image_id
-        let mut combined_bytes = Vec::new();
-        combined_bytes.extend_from_slice(&receipt_bytes);
-        combined_bytes.extend_from_slice(&image_id_bytes);
-    
-        // Create proof data with hex encoding
-        let proof_data = ProofData {
-            input: hex::encode(&combined_bytes),
-        };
-    
-          // Log the image ID in the format needed for the verifier
-          println!("\n=== COPY THIS IMAGE ID FOR VERIFIER ===");
-          println!("const PASSWORD_VERIFY_ID: [u32; 8] = [");
-          for (i, &id) in PASSWORD_VERIFY_ID.iter().enumerate() {
-              if i < PASSWORD_VERIFY_ID.len() - 1 {
-                  println!("    0x{:08x},", id);
-              } else {
-                  println!("    0x{:08x}", id);
-              }
-          }
-          println!("];");
-    
-        // Save to file
-        fs::write(
-            "proof_input.json",
-            serde_json::to_string_pretty(&proof_data).unwrap(),
-        )
+    // Get current time
+    let current_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Create the execution environment
+    let env = ExecutorEnv::builder()
+        .write(&birthdate_timestamp)
+        .unwrap()
+        .write(&current_timestamp)
+        .unwrap()
+        .build()
         .unwrap();
-    
-        println!("\n=== PROOF STATS ===");
-        println!("Proof size: {} bytes", combined_bytes.len());
-        println!("Hex string length: {} chars", proof_data.input.len());
+
+    // Get the prover
+    let prover = default_prover();
+
+    // Generate proof
+    println!("Generating age verification proof...");
+    let receipt = prover
+        .prove(env, AGE_VERIFY_ELF)
+        .unwrap()
+        .receipt;
+
+    // Prepare proof data
+    let receipt_bytes = bincode::serialize(&receipt).unwrap();
+    let image_id_bytes: Vec<u8> = AGE_VERIFY_ID
+        .iter()
+        .flat_map(|&id| id.to_le_bytes().to_vec())
+        .collect();
+
+    // Combine receipt and image_id
+    let mut combined_bytes = Vec::new();
+    combined_bytes.extend_from_slice(&receipt_bytes);
+    combined_bytes.extend_from_slice(&image_id_bytes);
+
+    // Create proof data with hex encoding
+    let proof_data = ProofData {
+        input: hex::encode(&combined_bytes),
+    };
+
+    // Log the image ID
+    println!("\n=== AGE VERIFICATION IMAGE ID ===");
+    println!("const AGE_VERIFY_ID: [u32; 8] = [");
+    for (i, &id) in AGE_VERIFY_ID.iter().enumerate() {
+        if i < AGE_VERIFY_ID.len() - 1 {
+            println!("    0x{:08x},", id);
+        } else {
+            println!("    0x{:08x}", id);
+        }
+    }
+    println!("];");
+
+    // Save proof to file
+    fs::write(
+        "proof_input.json",
+        serde_json::to_string_pretty(&proof_data).unwrap(),
+    )
+    .unwrap();
+
+    println!("\n=== PROOF STATS ===");
+    println!("Proof size: {} bytes", combined_bytes.len());
+    println!("Hex string length: {} chars", proof_data.input.len());
+
 }
 
 ```
+
+## Generate the Proof
+
+1. Build and run to generate the proof:
+
+```bash
+RISC0_DEV_MODE=0 cargo run --release
+```
+
+2. Check the generated proof:
+
+```bash
+cat proof_input.json
+```
+
+The proof is saved in `proof_input.json`. This file will be used in the next step to verify the proof in the Cartesi Machine. 
+
 
 ## Receipt Types and Proving Options
 
@@ -292,7 +338,7 @@ The `default_prover()` function automatically detects these environment variable
 ### 3. Specify Groth16 Receipts
 
 ```rust
-// Always use Groth16 receipts for Cartesi integration
+// It is recommended to use Groth16 receipts for Cartesi(on-chain) integration
 let receipt = prover
     .prove_with_opts(env, PASSWORD_ELF, &ProverOpts::groth16())
     .unwrap()
@@ -308,20 +354,10 @@ We strongly recommend using Groth16 receipts for Cartesi Rollups integration bec
 - Better scalability for blockchain applications
   :::
 
-## Running the Application
 
-1. Build and run to generate the proof:
-
-```bash
-RISC0_DEV_MODE=0 cargo run --release
-```
-
-2. Check the generated proof:
-
-```bash
-cat proof_input.json
-```
-
-The proof demonstrates that we know a password matching a specific hash, without revealing the password itself. This pattern can be extended to various authentication and verification scenarios.
 
 Next, we'll see how to verify this proof inside a Cartesi Rollup.
+
+## Important Links
+
+- [Source Code](https://github.com/masiedu4/cartesi-risczero/tree/main/generate_proof)
