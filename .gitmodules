@@ -7,3 +7,6 @@
 [submodule "docs/cartesi-co-processor-tutorial"]
 	path = docs/cartesi-co-processor-tutorial
 	url = https://github.com/Mugen-Builders/cartesi-co-processor-tutorial.git
+[submodule "docs/cartesi-risczero-tutorial"]
+	path = docs/cartesi-risczero-tutorial
+	url = https://github.com/Mugen-Builders/cartesi-risczero-tutorial.git
