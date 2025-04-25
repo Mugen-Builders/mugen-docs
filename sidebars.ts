@@ -101,7 +101,25 @@ const sidebars: SidebarsConfig = {
         'cartesi-co-processor-tutorial/limitations',
         'cartesi-co-processor-tutorial/troubleshooting',
       ],
-    }
+    },
+    {
+      type: 'category',
+      label: 'Risc Zero Integration',
+      items: [
+        'cartesi-risczero-tutorial/introduction',
+        'cartesi-risczero-tutorial/architecture',
+        'cartesi-risczero-tutorial/installation',
+        {
+          type: 'category',
+          label: 'Development',
+          items: [
+            'cartesi-risczero-tutorial/development/generate-a-zk-proof',
+            'cartesi-risczero-tutorial/development/verify-a-zk-proof-in-cartesi-rollups',
+            'cartesi-risczero-tutorial/development/verify-a-zk-proof-with-coprocessor',
+          ],
+        },
+      ],
+    },
   ],
    
 };
